@@ -1,25 +1,17 @@
-import {SagaProcessor} from "../../../../shared/infrastructure/saga/saga-processor/saga-processor";
-import {SagaDefinitionBuilder} from "../../../../shared/infrastructure/saga/saga-step-builder/saga-step-builder";
+import {SagaOrchestrator} from "../../../../shared/infrastructure/saga/saga-processor/saga-orchestrator";
+import {
+    SagaDefinitionBuilder
+} from "../../../../shared/infrastructure/saga/saga-step-builder/saga-step-builder";
 import {randomInt} from "crypto";
 import {MessageBroker} from "../../../../shared/domain/contracts/message-broker";
+import {Inject} from "@nestjs/common";
 
-export abstract class Saga {
-    private readonly sagaProcessor: SagaProcessor
-    protected constructor(protected readonly messageBroker : MessageBroker) {
-    }
-
-    async init(){
-        throw Error("You need to override this method and implement your own one")
-    }
-
-    async start(payload: any){
-        await this.sagaProcessor.start(payload)
-    }
-}
-
-export class UpdateProfileSaga extends Saga {
-    constructor(protected readonly messageBroker : MessageBroker) {
+export class UpdateProfileSaga extends SagaOrchestrator {
+    constructor(@Inject('MessageBroker')
+                protected readonly messageBroker: MessageBroker
+    ) {
         super(messageBroker)
+        this.init().then()
     }
 
     //configure and start the saga
@@ -45,8 +37,12 @@ export class UpdateProfileSaga extends Saga {
                 console.log("Cancel the debit on the account")
 
             })
-        const sagaPrecessor = new SagaProcessor(this.messageBroker, sagaStepBuilder.sagaDefinitions)
-        await sagaPrecessor.startConsuming()
+        this.sagaDefinitions = sagaStepBuilder.sagaDefinitions
+        await this.startConsuming()
+    }
+
+    async startConsuming(){
+        await super.startConsuming()
     }
 
 

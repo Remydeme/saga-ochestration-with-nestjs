@@ -3,17 +3,21 @@ import {StepPhase} from "../../../domain/contracts/saga-message";
 import {SagaDefinition} from "../saga-step-builder/saga-step-builder";
 import {randomUUID} from "crypto";
 
-export class SagaProcessor {
-    messageBroker: MessageBroker
-    sagaDefinitions: SagaDefinition[]
+export abstract class SagaOrchestrator {
+    protected messageBroker: MessageBroker
+    private _sagaDefinitions: SagaDefinition[]
 
-    constructor(messageBroker: MessageBroker,sagaDefinitions: SagaDefinition[]) {
+    protected constructor(messageBroker: MessageBroker) {
         this.messageBroker = messageBroker
-        this.sagaDefinitions = sagaDefinitions
     }
 
-    static init(messageBroker: MessageBroker, sagaDefinitions: SagaDefinition[]): SagaProcessor{
-        return new SagaProcessor(messageBroker, sagaDefinitions)
+
+    set sagaDefinitions(value: SagaDefinition[]) {
+        this._sagaDefinitions = value;
+    }
+
+    init(){
+        throw Error("Need to override this method. Define your step and start consuming here")
     }
 
     async startConsuming() {
@@ -21,7 +25,7 @@ export class SagaProcessor {
                console.log("Consuming new event")
                 switch (saga.phase) {
                     case StepPhase.StepForward: {
-                        const stepForward = this.sagaDefinitions[saga.index].phases[StepPhase.StepForward]!.action;
+                        const stepForward = this._sagaDefinitions[saga.index].phases[StepPhase.StepForward]!.action;
                         try {
                             await stepForward();
                             await this.makeStepForward(saga.index + 1, payload, header);
@@ -31,7 +35,7 @@ export class SagaProcessor {
                         return;
                     }
                     case StepPhase.StepBackWard: {
-                        const stepBackward = this.sagaDefinitions[saga.index].phases[StepPhase.StepBackWard]!.action;
+                        const stepBackward = this._sagaDefinitions[saga.index].phases[StepPhase.StepBackWard]!.action;
                         await stepBackward();
                         await this.makeStepBackward(saga.index - 1, payload, header);
                         return;
@@ -45,12 +49,12 @@ export class SagaProcessor {
     }
 
     async makeStepForward(index: number, payload: any, header: {traceId: string}) {
-        if (index >= this.sagaDefinitions.length) {
+        if (index >= this._sagaDefinitions.length) {
             console.log('====> Saga finished and transaction successful');
             return;
         }
         await this.messageBroker.send(
-           this.sagaDefinitions[index].channelName,
+           this._sagaDefinitions[index].channelName,
             {
                 payload,
                 header,
@@ -67,7 +71,7 @@ export class SagaProcessor {
             return;
         }
         await this.messageBroker.send(
-            this.sagaDefinitions[index].channelName,
+            this._sagaDefinitions[index].channelName,
             {
                 payload,
                 header,
