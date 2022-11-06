@@ -31,6 +31,17 @@ export class UpdateProfileSaga extends SagaOrchestrator {
                 //call api to cancel profile update in user service database
                 await this.userProvider.UpdateProfile(payload)
                 console.log("failed to update profile in auth database")
+            }).step("AuthService")
+            .onReply(async (payload)=>{
+                console.log("this is another step", payload)
+            }).withCompensation(async (payload)=>{
+                console.log("another step compensate", payload)
+            })
+            .step("AuthService")
+            .onReply(async (payload)=>{
+                console.log("this is another step", payload)
+            }).withCompensation(async (payload)=>{
+                console.log("another step compensate", payload)
             })
         this.sagaDefinitions = sagaStepBuilder.sagaDefinitions
         await this.startConsuming()
@@ -39,7 +50,6 @@ export class UpdateProfileSaga extends SagaOrchestrator {
     async startConsuming(){
         await super.startConsuming()
     }
-
 
     async start(payload: any): Promise<void> {
         await super.start(payload);

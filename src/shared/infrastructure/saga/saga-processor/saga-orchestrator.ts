@@ -22,7 +22,6 @@ export abstract class SagaOrchestrator {
 
     protected async startConsuming() {
         await this.messageBroker.consume(async ({saga, payload, header}) => {
-               console.log("Consuming new event")
                 switch (saga.phase) {
                     case StepPhase.StepForward: {
                         const stepForward = this._sagaDefinitions[saga.index].phases[StepPhase.StepForward]!.action;
