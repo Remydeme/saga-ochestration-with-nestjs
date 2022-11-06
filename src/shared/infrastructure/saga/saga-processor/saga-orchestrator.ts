@@ -20,14 +20,14 @@ export abstract class SagaOrchestrator {
         throw Error("Need to override this method. Define your step and start consuming here")
     }
 
-    async startConsuming() {
+    protected async startConsuming() {
         await this.messageBroker.consume(async ({saga, payload, header}) => {
                console.log("Consuming new event")
                 switch (saga.phase) {
                     case StepPhase.StepForward: {
                         const stepForward = this._sagaDefinitions[saga.index].phases[StepPhase.StepForward]!.action;
                         try {
-                            await stepForward();
+                            await stepForward(payload);
                             await this.makeStepForward(saga.index + 1, payload, header);
                         } catch (e) {
                             await this.makeStepBackward(saga.index - 1, payload, header);
@@ -36,7 +36,7 @@ export abstract class SagaOrchestrator {
                     }
                     case StepPhase.StepBackWard: {
                         const stepBackward = this._sagaDefinitions[saga.index].phases[StepPhase.StepBackWard]!.action;
-                        await stepBackward();
+                        await stepBackward(payload);
                         await this.makeStepBackward(saga.index - 1, payload, header);
                         return;
                     }
@@ -48,7 +48,7 @@ export abstract class SagaOrchestrator {
         );
     }
 
-    async makeStepForward(index: number, payload: any, header: {traceId: string}) {
+    protected async makeStepForward(index: number, payload: any, header: {traceId: string}) {
         if (index >= this._sagaDefinitions.length) {
             console.log('====> Saga finished and transaction successful');
             return;
@@ -65,7 +65,7 @@ export abstract class SagaOrchestrator {
             });
     }
 
-    async makeStepBackward(index: number,payload: any, header: {traceId: string}) {
+    protected async makeStepBackward(index: number,payload: any, header: {traceId: string}) {
         if (index < 0) {
             console.log('===> Saga finished and transaction rolled back');
             return;
