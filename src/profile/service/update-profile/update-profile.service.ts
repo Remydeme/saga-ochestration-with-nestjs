@@ -16,6 +16,6 @@ export class UpdateProfileService {
         await this.hublerProvider.UpdateProfile(profile)
 
         // start the saga
-       await this.saga.start(profile).then()
+       await this.saga.start(profile)
     }
 }
